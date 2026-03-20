@@ -29,6 +29,7 @@ def root():
 def health():
     return {"status": "ok"}
 
+# ENSURE NO SPACES BEFORE THESE TWO LINES
 @app.post("/generate-lead")
 async def generate_lead(url: str, user_id: int):
     # 1. Run the new advanced scraper
@@ -41,10 +42,7 @@ async def generate_lead(url: str, user_id: int):
 
     # 2. Iterate through the leads the AI found
     for lead in data["leads"]:
-        # We use the raw_text from the scraper to feed the AI writer
         lead_context = {"raw_text": data["raw_text"], "title": data["title"]}
-        
-        # Generate personalized outreach for THIS specific person
         ai_draft = await generate_outreach(lead_context)
         
         # 3. Save each lead to PostgreSQL
@@ -63,8 +61,6 @@ async def generate_lead(url: str, user_id: int):
             "s": url
         }
         await database.execute(query=query, values=values)
-        
         processed_leads.append({"name": lead.get("name"), "draft": ai_draft})
 
-    return {"status": "Leads processed", "count": len(processed_leads), "data": processed_leads}
-    
+    return {"status": "Leads processed", "data": processed_leads}
