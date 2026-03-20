@@ -2,10 +2,8 @@ import httpx
 import re
 import json
 import os
+import anthropic
 from bs4 import BeautifulSoup
-from openai import OpenAI
-
-# ── Regex helpers ──────────────────────────────────────────────────────────────
 
 def extract_emails(text: str) -> list:
     pattern = r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+'
@@ -13,78 +11,54 @@ def extract_emails(text: str) -> list:
     filtered = [
         e for e in emails
         if not e.endswith(('.png', '.jpg', '.gif', '.css', '.js', '.svg', '.woff'))
-        and 'example' not in e
-        and 'sentry' not in e
-        and '@2x' not in e
+        and 'example' not in e and 'sentry' not in e and '@2x' not in e
     ]
     return list(set(filtered))
-
 
 def extract_phones(text: str) -> list:
     pattern = r'(\+?1?\s?[\(\-]?\d{3}[\)\-\s]?\s?\d{3}[\-\s]?\d{4})'
     matches = re.findall(pattern, text)
     cleaned = [re.sub(r'\s+', ' ', m.strip()) for m in matches]
-    valid = [p for p in cleaned if len(re.sub(r'\D', '', p)) >= 10]
-    return list(set(valid))
-
+    return list(set([p for p in cleaned if len(re.sub(r'\D', '', p)) >= 10]))
 
 def extract_social_links(soup: BeautifulSoup) -> dict:
     socials = {}
     for a in soup.find_all('a', href=True):
         href = a['href'].lower()
-        if 'linkedin.com' in href:
-            socials['linkedin'] = a['href']
-        elif 'twitter.com' in href or 'x.com' in href:
-            socials['twitter'] = a['href']
-        elif 'facebook.com' in href:
-            socials['facebook'] = a['href']
+        if 'linkedin.com' in href: socials['linkedin'] = a['href']
+        elif 'twitter.com' in href or 'x.com' in href: socials['twitter'] = a['href']
+        elif 'facebook.com' in href: socials['facebook'] = a['href']
     return socials
-
 
 def clean_text(soup: BeautifulSoup) -> str:
     for tag in soup(['script', 'style', 'nav', 'footer', 'head', 'noscript']):
         tag.decompose()
     text = soup.get_text(separator=' ')
-    text = re.sub(r'\s+', ' ', text).strip()
-    return text[:4000]
-
-
-# ── OpenAI extraction ──────────────────────────────────────────────────────────
+    return re.sub(r'\s+', ' ', text).strip()[:4000]
 
 def extract_with_ai(raw_text: str, url: str) -> list:
-    """Use GPT to extract structured lead data from page text."""
-    api_key = os.getenv("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")
+    api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
-        print("[AI extraction] No OPENAI_API_KEY set, skipping AI extraction.")
+        print("[AI extraction] No ANTHROPIC_API_KEY set, skipping.")
         return []
-
-    prompt = f"""
-You are a lead extraction assistant. Given the following webpage text from {url}, extract all people mentioned with their details.
-
-Return ONLY a valid JSON array. Each object should have these fields (use empty string if unknown):
-- name (full name)
-- role (job title)
-- email
-- phone
-- company
-- location
-
-If no people are found, return an empty array [].
-
-Webpage text:
-{raw_text}
-
-JSON array:
-"""
     try:
-        client = OpenAI(api_key=api_key)
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0,
-            max_tokens=1000
+        client = anthropic.Anthropic(api_key=api_key)
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1000,
+            messages=[{
+                "role": "user",
+                "content": (
+                    f"You are a lead extraction assistant. Given this webpage text from {url}, "
+                    f"extract all people or businesses mentioned.\n\n"
+                    f"Return ONLY a valid JSON array. Each object should have: "
+                    f"name, role, email, phone, company, location (empty string if unknown).\n"
+                    f"If no people found, return [].\n\n"
+                    f"Webpage text:\n{raw_text}\n\nJSON array:"
+                )
+            }]
         )
-        content = response.choices[0].message.content.strip()
+        content = message.content[0].text.strip()
         content = re.sub(r'^```json\s*|\s*```$', '', content, flags=re.MULTILINE).strip()
         leads = json.loads(content)
         return leads if isinstance(leads, list) else []
@@ -92,94 +66,6 @@ JSON array:
         print(f"[AI extraction error] {e}")
         return []
 
-
-# ── Main scraper ───────────────────────────────────────────────────────────────
-
 async def scrape_website(url: str) -> dict:
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                      "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.9",
-    }
-
-    try:
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as http:
-            resp = await http.get(url, headers=headers)
-            soup = BeautifulSoup(resp.text, "lxml")
-
-            emails = extract_emails(resp.text)
-            phones = extract_phones(soup.get_text())
-            socials = extract_social_links(soup)
-            title = soup.title.string.strip() if soup.title else ""
-            raw_text = clean_text(soup)
-
-            ai_leads = extract_with_ai(raw_text, url)
-
-            if ai_leads:
-                for i, lead in enumerate(ai_leads):
-                    if not lead.get('email') and i < len(emails):
-                        lead['email'] = emails[i]
-                    if not lead.get('phone') and i < len(phones):
-                        lead['phone'] = phones[i]
-                    lead['source'] = url
-            else:
-                ai_leads = []
-                for email in emails:
-                    ai_leads.append({
-                        "name": "", "role": "", "email": email,
-                        "phone": phones[0] if phones else "",
-                        "company": title, "location": "", "source": url
-                    })
-                if not ai_leads and phones:
-                    ai_leads.append({
-                        "name": "", "role": "", "email": "",
-                        "phone": phones[0], "company": title,
-                        "location": "", "source": url
-                    })
-
-            return {
-                "url": url,
-                "title": title,
-                "leads": ai_leads,
-                "emails_found": emails,
-                "phones_found": phones,
-                "socials": socials,
-                "raw_text": raw_text
-            }
-
-    except Exception as e:
-        print(f"[Scrape error] {url}: {e}")
-        return {
-            "url": url, "title": "", "leads": [],
-            "emails_found": [], "phones_found": [],
-            "socials": {}, "raw_text": "", "error": str(e)
-        }
-        
-async def generate_outreach(lead_context: dict) -> str:
-    """
-    This is the function main.py is missing.
-    It takes the data from your scrape_website function and writes the email.
-    """
-    try:
-        # We use lead_context['raw_text'] which your scraper provides
-        # We limit text to 2000 chars so it doesn't break the AI limit
-        website_summary = lead_context.get("raw_text", "")[:2000]
-        page_title = lead_context.get("title", "this company")
-
-        response = await client.chat.completions.create(
-            model="gpt-4o", # or "gpt-3.5-turbo"
-            messages=[
-                {
-                    "role": "system", 
-                    "content": "You are an expert sales copywriter. Write a highly personalized, 3-sentence outreach email."
-                },
-                {
-                    "role": "user", 
-                    "content": f"Write an email for a lead found on a website titled '{page_title}'. Context: {website_summary}"
-                }
-            ]
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        print(f"AI Generation Error: {e}")
-        return "Hi, I saw your website and would love to discuss how we can help your business!"
+        "User-Agent": "Mozilla/5.0 (Windows NT
