@@ -39,7 +39,7 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
-    return {"message": "Account created", "token": create_token(data.email)}
+    return {"message": "Account created", "access_token": create_token(data.email), "name": data.name}
 
 @router.post("/login")
 def login(data: LoginRequest, db: Session = Depends(get_db)):
