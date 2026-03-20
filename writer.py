@@ -154,3 +154,32 @@ async def scrape_website(url: str) -> dict:
             "emails_found": [], "phones_found": [],
             "socials": {}, "raw_text": "", "error": str(e)
         }
+        
+async def generate_outreach(lead_context: dict) -> str:
+    """
+    This is the function main.py is missing.
+    It takes the data from your scrape_website function and writes the email.
+    """
+    try:
+        # We use lead_context['raw_text'] which your scraper provides
+        # We limit text to 2000 chars so it doesn't break the AI limit
+        website_summary = lead_context.get("raw_text", "")[:2000]
+        page_title = lead_context.get("title", "this company")
+
+        response = await client.chat.completions.create(
+            model="gpt-4o", # or "gpt-3.5-turbo"
+            messages=[
+                {
+                    "role": "system", 
+                    "content": "You are an expert sales copywriter. Write a highly personalized, 3-sentence outreach email."
+                },
+                {
+                    "role": "user", 
+                    "content": f"Write an email for a lead found on a website titled '{page_title}'. Context: {website_summary}"
+                }
+            ]
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print(f"AI Generation Error: {e}")
+        return "Hi, I saw your website and would love to discuss how we can help your business!"
