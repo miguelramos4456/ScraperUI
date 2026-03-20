@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
 from models import Lead
-from writer import scrape_website
 from pydantic import BaseModel
 import anthropic
 import httpx
