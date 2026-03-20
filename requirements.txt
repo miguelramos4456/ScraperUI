@@ -1,9 +1,10 @@
 fastapi
-uvicorn[standard]
-sqlalchemy
-requests
-beautifulsoup4
-psycopg2-binary
-python-jose[cryptography]
-bcrypt
+uvicorn
 httpx
+beautifulsoup4
+lxml
+openai
+python-multipart
+psycopg2-binary
+databases
+sqlalchemy
