@@ -1,8 +1,14 @@
+import os
+import re
+import anthropic
+import httpx
+from bs4 import BeautifulSoup
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
 from models import Lead
 from pydantic import BaseModel
+from writer import scrape_website
 
 router = APIRouter()
 
