@@ -53,7 +53,7 @@ def clean_text(soup: BeautifulSoup) -> str:
 
 def extract_with_ai(raw_text: str, url: str) -> list:
     """Use GPT to extract structured lead data from page text."""
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("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")
     if not api_key:
         print("[AI extraction] No OPENAI_API_KEY set, skipping AI extraction.")
         return []
