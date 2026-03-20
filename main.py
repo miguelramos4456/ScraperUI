@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from database import engine
+from database import engine, Base
 import models
 from auth import router as auth_router
 from leads import router as leads_router
