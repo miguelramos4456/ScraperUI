@@ -1,11 +1,8 @@
 fastapi
-uvicorn
-httpx
-beautifulsoup4
-openai
-databases
+uvicorn[standard]
 sqlalchemy
 psycopg2-binary
-pydantic
-python-dotenv
 python-jose[cryptography]
+bcrypt
+passlib[bcrypt]
+python-multipart
