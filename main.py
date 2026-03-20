@@ -25,7 +25,7 @@ app.include_router(leads_router, prefix="/leads", tags=["Leads"])
 
 @app.get("/")
 def root():
-    return {"status": "LeadGen API is running"}
+    return {"status": "Scraper UI is running"}
 
 @app.get("/health")
 def health():
