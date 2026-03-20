@@ -6,7 +6,7 @@ import os
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("postgresql://postgres:vxrsmQPpwsuWpfESwuuoHkHCiUryeBDZ@postgres.railway.internal:5432/railway")
+DATABASE_URL = os.getenv(${{Postgres.DATABASE_URL}})
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
