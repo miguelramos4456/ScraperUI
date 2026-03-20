@@ -12,6 +12,7 @@ router = APIRouter()
 SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey123")
 
 class RegisterRequest(BaseModel):
+    name str = ""
     email: str
     password: str
 
