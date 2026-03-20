@@ -3,11 +3,6 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import Lead
 from pydantic import BaseModel
-import anthropic
-import httpx
-import os
-import re
-from bs4 import BeautifulSoup
 
 router = APIRouter()
 
