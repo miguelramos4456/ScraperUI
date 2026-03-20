@@ -3,3 +3,4 @@ uvicorn[standard]
 sqlalchemy
 requests
 beautifulsoup4
+psycopg2-binary
