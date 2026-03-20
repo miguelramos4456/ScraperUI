@@ -9,7 +9,7 @@ from writer import generate_outreach
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="LeadGen API")
+app = FastAPI(title="Scraper UI")
 
 # Allow frontend to talk to the API
 app.add_middleware(
