@@ -11,7 +11,9 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Scraper UI")
 
-# Allow frontend to talk to the API
+# ── CORS ───────────────────────────────────────────────────────────────────────
+# NOTE: allow_origins=["*"] cannot be used with allow_credentials=True in FastAPI.
+# You must list origins explicitly when credentials are enabled.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -20,6 +22,7 @@ app.add_middleware(
         "http://localhost:3000",
         "http://localhost:5500",
         "http://127.0.0.1:5500",
+        "http://localhost:8080",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -36,38 +39,19 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
-# ENSURE NO SPACES BEFORE THESE TWO LINES
+
 @app.post("/generate-lead")
 async def generate_lead(url: str, user_id: int):
-    # 1. Run the new advanced scraper
     data = await scrape_website(url)
-    
+
     if not data.get("leads"):
         return {"status": "No leads found", "url": url}
 
     processed_leads = []
 
-    # 2. Iterate through the leads the AI found
     for lead in data["leads"]:
         lead_context = {"raw_text": data["raw_text"], "title": data["title"]}
         ai_draft = await generate_outreach(lead_context)
-        
-        # 3. Save each lead to PostgreSQL
-        query = """
-        INSERT INTO leads (user_id, name, email, phone, role, company, ai_draft, source_url)
-        VALUES (:u, :n, :e, :p, :r, :c, :a, :s)
-        """
-        values = {
-            "u": user_id,
-            "n": lead.get("name"),
-            "e": lead.get("email"),
-            "p": lead.get("phone"),
-            "r": lead.get("role"),
-            "c": lead.get("company"),
-            "a": ai_draft,
-            "s": url
-        }
-        await database.execute(query=query, values=values)
         processed_leads.append({"name": lead.get("name"), "draft": ai_draft})
 
     return {"status": "Leads processed", "data": processed_leads}
