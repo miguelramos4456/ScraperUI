@@ -222,7 +222,7 @@ async def scrape_leads(data: ScrapeRequest, db: Session = Depends(get_db)):
 
 # ── GET saved leads ────────────────────────────────────────────────────────────
 
-@router.get("/leads")
+@router.get("/")
 def get_leads(db: Session = Depends(get_db)):
     leads = db.query(Lead).all()
     return {"leads": [
@@ -241,7 +241,7 @@ def get_leads(db: Session = Depends(get_db)):
 
 # ── DELETE a lead ──────────────────────────────────────────────────────────────
 
-@router.delete("/leads/{lead_id}")
+@router.delete("/{lead_id}")
 def delete_lead(lead_id: int, db: Session = Depends(get_db)):
     lead = db.query(Lead).filter(Lead.id == lead_id).first()
     if not lead:
