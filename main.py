@@ -28,7 +28,8 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
-    @app.post("/generate-lead")
+
+@app.post("/generate-lead")
 async def generate_lead(url: str, user_id: int):
     # 1. Run the new advanced scraper
     data = await scrape_website(url)
