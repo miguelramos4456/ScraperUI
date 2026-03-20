@@ -2,9 +2,9 @@ fastapi
 uvicorn
 httpx
 beautifulsoup4
-lxml
 openai
-python-multipart
-psycopg2-binary
 databases
 sqlalchemy
+psycopg2-binary
+pydantic
+python-dotenv
