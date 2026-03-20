@@ -5,7 +5,6 @@ from sqlalchemy.orm import sessionmaker
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Handle the 'postgres://' vs 'postgresql://' issue
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
@@ -13,7 +12,7 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# --- ADD THIS PART BACK BELOW ---
+# This must be all the way to the left (no spaces before 'def')
 def get_db():
     db = SessionLocal()
     try:
