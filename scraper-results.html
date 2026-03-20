@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Results — LeadGen</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080b10; --surface: #0e1318; --surface2: #111820;
+    --border: #1a2230; --accent: #00e5ff; --accent2: #7b61ff;
+    --text: #e8edf5; --muted: #4a5568; --success: #00e5a0;
+    --error: #ff4d6d; --warning: #ffb347;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
+
+  .sidebar { width: 240px; min-height: 100vh; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 50; }
+  .sidebar-logo { padding: 28px 24px; border-bottom: 1px solid var(--border); font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.3rem; text-decoration: none; color: var(--text); }
+  .sidebar-logo span { color: var(--accent); }
+  .sidebar-nav { padding: 24px 12px; flex: 1; }
+  .nav-section-label { font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); padding: 0 12px; margin-bottom: 8px; margin-top: 20px; }
+  .nav-section-label:first-child { margin-top: 0; }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 6px; color: var(--muted); text-decoration: none; font-size: 0.82rem; transition: all 0.15s; cursor: pointer; border: none; background: none; width: 100%; text-align: left; }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: rgba(0,229,255,0.1); color: var(--accent); }
+  .nav-item .icon { font-size: 1rem; width: 20px; text-align: center; }
+  .sidebar-footer { padding: 20px 12px; border-top: 1px solid var(--border); }
+  .user-badge { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 6px; background: var(--surface2); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: var(--bg); flex-shrink: 0; }
+  .user-info { overflow: hidden; }
+  .user-name { font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .user-role { font-size: 0.68rem; color: var(--muted); }
+
+  .main { margin-left: 240px; flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
+  .topbar { padding: 20px 40px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: rgba(8,11,16,0.9); position: sticky; top: 0; z-index: 40; backdrop-filter: blur(10px); }
+  .topbar h1 { font-family: 'Syne', sans-serif; font-size: 1.3rem; font-weight: 700; }
+  .btn-sm { padding: 8px 16px; font-family: 'DM Mono', monospace; font-size: 0.75rem; cursor: pointer; border-radius: 4px; transition: all 0.2s; letter-spacing: 0.05em; }
+  .btn-accent { background: var(--accent); color: var(--bg); border: none; }
+  .btn-accent:hover { background: #33ecff; }
+  .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: transparent; color: var(--error); border: 1px solid rgba(255,77,109,0.3); }
+  .btn-danger:hover { background: rgba(255,77,109,0.1); }
+
+  .content { padding: 40px; flex: 1; }
+
+  /* FILTERS BAR */
+  .filters-bar {
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+  .search-input { flex: 1; min-width: 200px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 10px 16px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.82rem; outline: none; transition: border-color 0.2s; }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--muted); }
+  select.search-input { cursor: pointer; }
+
+  /* TABLE */
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .table-meta { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .table-meta-left { font-size: 0.78rem; color: var(--muted); }
+  .table-meta-left span { color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; }
+  th { padding: 12px 20px; text-align: left; font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); background: var(--surface2); cursor: pointer; user-select: none; }
+  th:hover { color: var(--text); }
+  td { padding: 12px 20px; font-size: 0.8rem; border-bottom: 1px solid rgba(26,34,48,0.4); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  .email-cell { color: var(--accent); }
+  .phone-cell { color: var(--success); }
+  .source-cell { color: var(--muted); font-size: 0.72rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .action-btns { display: flex; gap: 6px; }
+  .btn-icon { padding: 4px 10px; font-size: 0.68rem; font-family: 'DM Mono', monospace; cursor: pointer; border-radius: 3px; border: 1px solid var(--border); background: transparent; color: var(--muted); transition: all 0.15s; }
+  .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-icon.danger:hover { border-color: var(--error); color: var(--error); }
+  .checkbox-col { width: 40px; }
+  input[type=checkbox] { accent-color: var(--accent); }
+
+  /* EMPTY */
+  .empty-state { text-align: center; padding: 80px 20px; color: var(--muted); }
+  .empty-state .ei { font-size: 3rem; margin-bottom: 16px; }
+  .empty-state p { font-size: 0.82rem; margin-bottom: 20px; }
+
+  /* PAGINATION */
+  .pagination { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .pagination-info { font-size: 0.75rem; color: var(--muted); }
+  .pagination-btns { display: flex; gap: 6px; }
+  .page-btn { padding: 6px 12px; font-family: 'DM Mono', monospace; font-size: 0.72rem; cursor: pointer; border-radius: 3px; border: 1px solid var(--border); background: transparent; color: var(--muted); transition: all 0.15s; }
+  .page-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .page-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; }
+    .content { padding: 20px; }
+    .topbar { padding: 16px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <a href="scraper-index.html" class="sidebar-logo">Lead<span>Gen</span></a>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">// Main</div>
+    <a class="nav-item" href="scraper-dashboard.html"><span class="icon">📊</span> Dashboard</a>
+    <a class="nav-item" href="scraper-app.html"><span class="icon">🔍</span> Scraper</a>
+    <a class="nav-item active" href="scraper-results.html"><span class="icon">📋</span> Results</a>
+    <div class="nav-section-label">// Data</div>
+    <a class="nav-item" href="scraper-results.html"><span class="icon">📥</span> Export Leads</a>
+    <div class="nav-section-label">// Account</div>
+    <button class="nav-item" onclick="logout()"><span class="icon">🚪</span> Logout</button>
+    <a href="projects.html" style="color:#4a5568;text-decoration:none;font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;transition:color 0.2s" onmouseover="this.style.color='#00e5ff'" onmouseout="this.style.color='#4a5568'">← portfolio</a>
+</nav>
+  <div class="sidebar-footer">
+    <div class="user-badge">
+      <div class="avatar">U</div>
+      <div class="user-info">
+        <div class="user-name">User</div>
+        <div class="user-role">Pro Plan</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <h1>Results</h1>
+    <div style="display:flex;gap:12px">
+      <button class="btn-sm btn-danger" onclick="clearSelected()">🗑 Delete Selected</button>
+      <button class="btn-sm btn-outline" onclick="exportSelected()">↓ Export Selected</button>
+      <button class="btn-sm btn-accent" onclick="exportAll()">↓ Export All</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- FILTERS -->
+    <div class="filters-bar">
+      <input type="text" class="search-input" id="search-input" placeholder="🔍  Search by name, email, phone..." oninput="applyFilters()">
+      <select class="search-input" id="source-filter" onchange="applyFilters()" style="max-width:200px">
+        <option value="">All Sources</option>
+      </select>
+      <button class="btn-sm btn-outline" onclick="clearAll()">Clear All</button>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-wrap">
+      <div class="table-meta">
+        <div class="table-meta-left">Showing <span id="showing-count">0</span> of <span id="total-count">0</span> leads</div>
+        <div style="display:flex;gap:8px">
+          <input type="checkbox" id="select-all" onchange="toggleSelectAll()" title="Select All">
+          <span style="font-size:0.72rem;color:var(--muted)">Select all</span>
+        </div>
+      </div>
+      <div id="table-container">
+        <div class="empty-state">
+          <div class="ei">📋</div>
+          <p>No leads saved yet. Run a scrape first.</p>
+          <a href="scraper-app.html"><button class="btn-sm btn-accent">→ Go to Scraper</button></a>
+        </div>
+      </div>
+      <div class="pagination" id="pagination" style="display:none">
+        <div class="pagination-info" id="page-info">Page 1 of 1</div>
+        <div class="pagination-btns" id="page-btns"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let allLeads = [];
+  let filteredLeads = [];
+  let selectedIds = new Set();
+  let currentPage = 1;
+  const perPage = 20;
+
+  function loadLeads() {
+    allLeads = JSON.parse(localStorage.getItem('leads') || '[]');
+    filteredLeads = [...allLeads];
+
+    // Populate source filter
+    const sources = [...new Set(allLeads.map(l => l.source).filter(Boolean))];
+    const sel = document.getElementById('source-filter');
+    sources.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s; opt.textContent = s.replace(/https?:\/\//, '').substring(0, 30);
+      sel.appendChild(opt);
+    });
+
+    renderTable();
+  }
+
+  function applyFilters() {
+    const q = document.getElementById('search-input').value.toLowerCase();
+    const src = document.getElementById('source-filter').value;
+    filteredLeads = allLeads.filter(l => {
+      const matchQ = !q || Object.values(l).some(v => String(v).toLowerCase().includes(q));
+      const matchSrc = !src || l.source === src;
+      return matchQ && matchSrc;
+    });
+    currentPage = 1;
+    renderTable();
+  }
+
+  function renderTable() {
+    document.getElementById('total-count').textContent = allLeads.length;
+    document.getElementById('showing-count').textContent = filteredLeads.length;
+
+    if (!filteredLeads.length) {
+      document.getElementById('table-container').innerHTML = `
+        <div class="empty-state">
+          <div class="ei">${allLeads.length ? '🔍' : '📋'}</div>
+          <p>${allLeads.length ? 'No leads match your search.' : 'No leads saved yet.'}</p>
+          ${!allLeads.length ? '<a href="scraper-app.html"><button class="btn-sm btn-accent">→ Go to Scraper</button></a>' : ''}
+        </div>`;
+      document.getElementById('pagination').style.display = 'none';
+      return;
+    }
+
+    const totalPages = Math.ceil(filteredLeads.length / perPage);
+    const start = (currentPage - 1) * perPage;
+    const pageLeads = filteredLeads.slice(start, start + perPage);
+    const keys = Object.keys(allLeads[0] || {});
+
+    document.getElementById('table-container').innerHTML = `
+      <table>
+        <thead><tr>
+          <th class="checkbox-col"></th>
+          ${keys.map(k => `<th>${k}</th>`).join('')}
+          <th>Actions</th>
+        </tr></thead>
+        <tbody>
+          ${pageLeads.map((r, i) => {
+            const globalIdx = allLeads.indexOf(r);
+            return `<tr>
+              <td><input type="checkbox" ${selectedIds.has(globalIdx)?'checked':''} onchange="toggleSelect(${globalIdx}, this.checked)"></td>
+              ${keys.map(k => `<td class="${k==='email'?'email-cell':k==='phone'?'phone-cell':k==='source'?'source-cell':''}" title="${r[k]||''}">${r[k]||'—'}</td>`).join('')}
+              <td><div class="action-btns">
+                <button class="btn-icon" onclick="copyLead(${globalIdx})">Copy</button>
+                <button class="btn-icon danger" onclick="deleteLead(${globalIdx})">Del</button>
+              </div></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+
+    // Pagination
+    if (totalPages > 1) {
+      document.getElementById('pagination').style.display = 'flex';
+      document.getElementById('page-info').textContent = `Page ${currentPage} of ${totalPages}`;
+      let btns = `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>←</button>`;
+      for (let p = Math.max(1,currentPage-2); p <= Math.min(totalPages,currentPage+2); p++) {
+        btns += `<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+      }
+      btns += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>→</button>`;
+      document.getElementById('page-btns').innerHTML = btns;
+    } else {
+      document.getElementById('pagination').style.display = 'none';
+    }
+  }
+
+  function goPage(p) {
+    const totalPages = Math.ceil(filteredLeads.length / perPage);
+    if (p < 1 || p > totalPages) return;
+    currentPage = p;
+    renderTable();
+  }
+
+  function toggleSelect(idx, checked) {
+    checked ? selectedIds.add(idx) : selectedIds.delete(idx);
+  }
+
+  function toggleSelectAll() {
+    const checked = document.getElementById('select-all').checked;
+    filteredLeads.forEach(l => {
+      const idx = allLeads.indexOf(l);
+      checked ? selectedIds.add(idx) : selectedIds.delete(idx);
+    });
+    renderTable();
+  }
+
+  function copyLead(idx) {
+    const lead = allLeads[idx];
+    navigator.clipboard.writeText(Object.values(lead).join('\t'));
+  }
+
+  function deleteLead(idx) {
+    allLeads.splice(idx, 1);
+    localStorage.setItem('leads', JSON.stringify(allLeads));
+    selectedIds.delete(idx);
+    applyFilters();
+  }
+
+  function clearSelected() {
+    if (!selectedIds.size) return alert('No leads selected.');
+    const sorted = [...selectedIds].sort((a,b)=>b-a);
+    sorted.forEach(i => allLeads.splice(i, 1));
+    localStorage.setItem('leads', JSON.stringify(allLeads));
+    selectedIds.clear();
+    loadLeads();
+  }
+
+  function exportSelected() {
+    const toExport = selectedIds.size > 0
+      ? [...selectedIds].map(i => allLeads[i])
+      : filteredLeads;
+    if (!toExport.length) return alert('Nothing to export.');
+    doExport(toExport, 'leads_selected');
+  }
+
+  function exportAll() {
+    if (!allLeads.length) return alert('No leads to export.');
+    doExport(allLeads, 'leads_all');
+  }
+
+  function doExport(data, filename) {
+    const headers = Object.keys(data[0]).join(',');
+    const rows = data.map(r => Object.values(r).map(v => `"${v||''}"`).join(',')).join('\n');
+    const blob = new Blob([headers + '\n' + rows], { type: 'text/csv' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `${filename}_${Date.now()}.csv`; a.click();
+  }
+
+  function clearAll() {
+    if (!confirm('Delete ALL leads? This cannot be undone.')) return;
+    localStorage.removeItem('leads');
+    localStorage.removeItem('scrapes');
+    allLeads = []; filteredLeads = [];
+    selectedIds.clear();
+    renderTable();
+  }
+
+  function logout() { localStorage.removeItem('token'); window.location.href = 'scraper-index.html'; }
+
+  loadLeads();
+</script>
+</body>
+</html>
