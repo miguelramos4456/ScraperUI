@@ -1,5 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from database import engine, Base
+import models
+from auth import router as auth_router
+from leads import router as leads_router
+from writer import scrape_website
+from writer import generate_outreach
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -13,14 +19,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-from database import engine, Base
-import models
-from auth import router as auth_router
-from leads import router as leads_router
-from writer import scrape_website
-from writer import generate_outreach
-
 
 app.include_router(auth_router, prefix="/auth", tags=["Auth"])
 app.include_router(leads_router, prefix="/leads", tags=["Leads"])
