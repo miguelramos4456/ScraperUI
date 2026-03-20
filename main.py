@@ -4,6 +4,8 @@ from database import engine
 import models
 from auth import router as auth_router
 from leads import router as leads_router
+from writer import scrape_website
+from writer import generate_outreach
 
 models.Base.metadata.create_all(bind=engine)
 
