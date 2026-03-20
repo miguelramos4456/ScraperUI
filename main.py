@@ -30,7 +30,6 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
-
 # ENSURE NO SPACES BEFORE THESE TWO LINES
 @app.post("/generate-lead")
 async def generate_lead(url: str, user_id: int):
