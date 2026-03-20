@@ -46,4 +46,4 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == data.email).first()
     if not user or not verify_password(data.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
-    return {"message": "Login successful", "token": create_token(data.email)}
+    return {"message": "Login successful", "access_token": create_token(data.email), "name": user.name or user.email}
