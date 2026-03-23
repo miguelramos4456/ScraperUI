@@ -36,7 +36,7 @@ def get_client():
 
 # ── Fetch & parse job listing ──────────────────────────────────────────────────
 
-@router.post("/fetch-job")
+ython@router.post("/fetch-job")
 async def fetch_job(
     data: FetchJobRequest,
     db: Session = Depends(get_db),
@@ -48,11 +48,15 @@ async def fetch_job(
     client = get_client()
 
     try:
-        message = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=1000,
-            tools=[{"type": "web_search_20250305", "name": "web_search"}],
-            system="""You are a job listing parser. Fetch the job listing from the given URL and extract the details.
+        messages = [{"role": "user", "content": f"Fetch and parse this job listing: {data.url}"}]
+
+        # ── Tool loop: keep going until Claude finishes (handles web_search internally)
+        while True:
+            response = client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=1000,
+                tools=[{"type": "web_search_20250305", "name": "web_search"}],
+                system="""You are a job listing parser. Fetch the job listing from the given URL and extract the details.
 Return ONLY valid JSON with exactly this structure, no markdown fences, no explanation:
 {
   "title": "Job title",
@@ -64,13 +68,30 @@ Return ONLY valid JSON with exactly this structure, no markdown fences, no expla
   "requirements": ["req1","req2","req3"],
   "keywords": ["keyword1","keyword2","keyword3","keyword4","keyword5"]
 }""",
-            messages=[{"role": "user", "content": f"Fetch and parse this job listing: {data.url}"}]
-        )
+                messages=messages
+            )
 
-        text_blocks = [b.text for b in message.content if hasattr(b, "text") and b.text]
+            if response.stop_reason == "end_turn":
+                break
+
+            if response.stop_reason == "tool_use":
+                # Append assistant's tool_use message, then provide tool_result
+                messages.append({"role": "assistant", "content": response.content})
+                tool_results = []
+                for block in response.content:
+                    if block.type == "tool_use":
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": block.id,
+                            "content": ""  # web_search results are injected by the API
+                        })
+                messages.append({"role": "user", "content": tool_results})
+            else:
+                break  # unexpected stop reason, exit loop
+
+        text_blocks = [b.text for b in response.content if hasattr(b, "text") and b.text]
         raw = " ".join(text_blocks)
 
-        # Extract JSON from response
         json_match = re.search(r'\{[\s\S]*\}', raw)
         if not json_match:
             raise ValueError("No JSON found in response")
@@ -86,7 +107,6 @@ Return ONLY valid JSON with exactly this structure, no markdown fences, no expla
         raise HTTPException(status_code=422, detail="Could not parse job details. Try pasting the job description manually instead.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 # ── Tailor CV ─────────────────────────────────────────────────────────────────
 
