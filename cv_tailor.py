@@ -36,7 +36,7 @@ def get_client():
 
 # ── Fetch & parse job listing ──────────────────────────────────────────────────
 
-ython@router.post("/fetch-job")
+@router.post("/fetch-job")
 async def fetch_job(
     data: FetchJobRequest,
     db: Session = Depends(get_db),
