@@ -5,6 +5,7 @@ import models
 from auth import router as auth_router
 from leads import router as leads_router
 from payments import router as payments_router
+from cv_tailor import router as cv_router
 from writer import scrape_website
 from writer import generate_outreach
 
@@ -24,12 +25,14 @@ app.add_middleware(
     ],
     allow_credentials=True,
     allow_methods=["*"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.include_router(auth_router,     prefix="/auth",     tags=["Auth"])
 app.include_router(leads_router,    prefix="/leads",    tags=["Leads"])
 app.include_router(payments_router, prefix="/payments", tags=["Payments"])
+app.include_router(cv_router,       prefix="/cv",       tags=["CV Tailor"])
 
 @app.get("/")
 def root():
