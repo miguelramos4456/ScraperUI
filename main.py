@@ -4,6 +4,7 @@ from database import engine, Base
 import models
 from auth import router as auth_router
 from leads import router as leads_router
+from payments import router as payments_router
 from writer import scrape_website
 from writer import generate_outreach
 
@@ -11,9 +12,6 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Scraper UI")
 
-# ── CORS ───────────────────────────────────────────────────────────────────────
-# NOTE: allow_origins=["*"] cannot be used with allow_credentials=True in FastAPI.
-# You must list origins explicitly when credentials are enabled.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -29,8 +27,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth_router, prefix="/auth", tags=["Auth"])
-app.include_router(leads_router, prefix="/leads", tags=["Leads"])
+app.include_router(auth_router,     prefix="/auth",     tags=["Auth"])
+app.include_router(leads_router,    prefix="/leads",    tags=["Leads"])
+app.include_router(payments_router, prefix="/payments", tags=["Payments"])
 
 @app.get("/")
 def root():
@@ -43,15 +42,11 @@ def health():
 @app.post("/generate-lead")
 async def generate_lead(url: str, user_id: int):
     data = await scrape_website(url)
-
     if not data.get("leads"):
         return {"status": "No leads found", "url": url}
-
     processed_leads = []
-
     for lead in data["leads"]:
         lead_context = {"raw_text": data["raw_text"], "title": data["title"]}
         ai_draft = await generate_outreach(lead_context)
         processed_leads.append({"name": lead.get("name"), "draft": ai_draft})
-
     return {"status": "Leads processed", "data": processed_leads}
