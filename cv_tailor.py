@@ -50,7 +50,6 @@ async def fetch_job(
     try:
         messages = [{"role": "user", "content": f"Fetch and parse this job listing: {data.url}"}]
 
-        # ── Tool loop: keep going until Claude finishes (handles web_search internally)
         while True:
             response = client.messages.create(
                 model="claude-sonnet-4-6",
@@ -75,7 +74,6 @@ Return ONLY valid JSON with exactly this structure, no markdown fences, no expla
                 break
 
             if response.stop_reason == "tool_use":
-                # Append assistant's tool_use message, then provide tool_result
                 messages.append({"role": "assistant", "content": response.content})
                 tool_results = []
                 for block in response.content:
@@ -83,11 +81,11 @@ Return ONLY valid JSON with exactly this structure, no markdown fences, no expla
                         tool_results.append({
                             "type": "tool_result",
                             "tool_use_id": block.id,
-                            "content": ""  # web_search results are injected by the API
+                            "content": ""
                         })
                 messages.append({"role": "user", "content": tool_results})
             else:
-                break  # unexpected stop reason, exit loop
+                break
 
         text_blocks = [b.text for b in response.content if hasattr(b, "text") and b.text]
         raw = " ".join(text_blocks)
