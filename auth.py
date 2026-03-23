@@ -21,11 +21,14 @@ class RegisterRequest(BaseModel):
     name:     str = ""
     email:    str
     password: str
-    plan:     str = "basic"   # basic | pro | premium
+    plan:     str = "basic"
 
 class LoginRequest(BaseModel):
     email:    str
     password: str
+
+class ChangePlanRequest(BaseModel):
+    plan: str   # basic | pro | premium
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -66,11 +69,6 @@ def get_current_user(
 
 
 def require_plan(required: str):
-    """
-    Dependency factory — use like:
-        Depends(require_plan("pro"))
-        Depends(require_plan("premium"))
-    """
     RANK = {"basic": 1, "pro": 2, "premium": 3}
 
     def checker(current_user: User = Depends(get_current_user)) -> User:
@@ -88,15 +86,12 @@ def require_plan(required: str):
 
 @router.post("/register")
 def register(data: RegisterRequest, db: Session = Depends(get_db)):
-    # Check email not taken
     if db.query(User).filter(User.email == data.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    # Resolve plan — default to basic if unknown value sent
     plan_name = data.plan if data.plan in ("basic", "pro", "premium") else "basic"
     plan = db.query(Plan).filter(Plan.name == plan_name).first()
     if not plan:
-        # Plans table not seeded yet — fall back gracefully
         plan = db.query(Plan).filter(Plan.name == "basic").first()
     if not plan:
         raise HTTPException(status_code=500, detail="Plans not configured. Run the seed SQL first.")
@@ -147,4 +142,31 @@ def me(current_user: User = Depends(get_current_user)):
         "name":  current_user.name,
         "email": current_user.email,
         "plan":  plan_name,
+    }
+
+
+@router.patch("/plan")
+def change_plan(
+    data: ChangePlanRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Allow a logged-in user to switch their plan without logging out."""
+    plan_name = data.plan if data.plan in ("basic", "pro", "premium") else "basic"
+    plan = db.query(Plan).filter(Plan.name == plan_name).first()
+    if not plan:
+        raise HTTPException(status_code=404, detail=f"Plan '{plan_name}' not found")
+
+    current_user.plan_id = plan.id
+    current_user.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(current_user)
+
+    # Issue a fresh token with the new plan embedded
+    new_token = create_token(current_user.id, current_user.email, plan.name)
+
+    return {
+        "message": f"Plan updated to {plan.label}",
+        "plan": plan.name,
+        "access_token": new_token
     }
