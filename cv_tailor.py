@@ -131,7 +131,7 @@ Description: {data.job_desc}"""
     try:
         # ── 1. Tailor CV
         cv_msg = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-4-6",
             max_tokens=2000,
             system="""You are an expert CV writer and career coach.
 Rewrite and tailor the provided CV to match the job listing.
@@ -149,7 +149,7 @@ Rules:
 
         # ── 2. Cover Letter
         cover_msg = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-4-6",
             max_tokens=800,
             system="""You are an expert career coach writing a compelling cover letter.
 Write a professional, concise cover letter (3-4 paragraphs) that:
@@ -165,7 +165,7 @@ Output plain text only.""",
 
         # ── 3. Tips & match score
         tips_msg = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-4-6",
             max_tokens=800,
             system="""You are a career coach giving honest, actionable advice.
 Analyse the CV against the job requirements and provide:
