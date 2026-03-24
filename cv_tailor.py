@@ -45,17 +45,34 @@ async def fetch_job(
     if not data.url.startswith("http"):
         raise HTTPException(status_code=400, detail="Please provide a valid URL starting with http/https")
 
-    client = get_client()
-
+    # Step 1: Scrape the page directly
     try:
-        messages = [{"role": "user", "content": f"Fetch and parse this job listing: {data.url}"}]
+        import httpx
+        from bs4 import BeautifulSoup
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                          "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as http:
+            resp = await http.get(data.url, headers=headers)
+            soup = BeautifulSoup(resp.text, "lxml")
+            for tag in soup(['script', 'style', 'nav', 'footer', 'head', 'noscript']):
+                tag.decompose()
+            raw_text = re.sub(r'\s+', ' ', soup.get_text(separator=' ')).strip()[:6000]
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not fetch the URL: {str(e)}")
 
-        while True:
-            response = client.messages.create(
-                model="claude-sonnet-4-6",
-                max_tokens=1000,
-                tools=[{"type": "web_search_20250305", "name": "web_search"}],
-                system="""You are a job listing parser. Fetch the job listing from the given URL and extract the details.
+    if len(raw_text) < 100:
+        raise HTTPException(status_code=400, detail="Could not read enough content from that URL. Try pasting the job description manually.")
+
+    # Step 2: Ask Claude to parse the scraped text
+    client = get_client()
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1000,
+            system="""You are a job listing parser. Extract job details from the provided webpage text.
 Return ONLY valid JSON with exactly this structure, no markdown fences, no explanation:
 {
   "title": "Job title",
@@ -67,37 +84,16 @@ Return ONLY valid JSON with exactly this structure, no markdown fences, no expla
   "requirements": ["req1","req2","req3"],
   "keywords": ["keyword1","keyword2","keyword3","keyword4","keyword5"]
 }""",
-                messages=messages
-            )
+            messages=[{"role": "user", "content": f"Parse this job listing page content:\n\n{raw_text}"}]
+        )
 
-            if response.stop_reason == "end_turn":
-                break
+        raw = response.content[0].text.strip()
+        raw = re.sub(r'^```json\s*|\s*```$', '', raw, flags=re.MULTILINE).strip()
 
-            if response.stop_reason == "tool_use":
-                messages.append({"role": "assistant", "content": response.content})
-                tool_results = []
-                for block in response.content:
-                    if block.type == "tool_use":
-                        tool_results.append({
-                            "type": "tool_result",
-                            "tool_use_id": block.id,
-                            "content": ""
-                        })
-                messages.append({"role": "user", "content": tool_results})
-            else:
-                break
-
-        text_blocks = [b.text for b in response.content if hasattr(b, "text") and b.text]
-        raw = " ".join(text_blocks)
-
-        json_match = re.search(r'\{[\s\S]*\}', raw)
-        if not json_match:
-            raise ValueError("No JSON found in response")
-
-        parsed = json.loads(json_match.group(0))
+        parsed = json.loads(raw)
 
         if not parsed.get("title"):
-            raise ValueError("Could not extract job title from the URL")
+            raise ValueError("Could not extract job title")
 
         return parsed
 
